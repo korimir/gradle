@@ -75,8 +75,8 @@ class ClasspathFactory {
         if (classpath.projectDependenciesOnly) {
             projectDependenciesCreator.update(entries, classpath)
         } else {
-            projectDependenciesCreator.update(entries, classpath)
             librariesCreator.update(entries, classpath)
+            projectDependenciesCreator.update(entries, classpath)
             entries.addAll(classFoldersCreator.create(classpath))
         }
         return entries
