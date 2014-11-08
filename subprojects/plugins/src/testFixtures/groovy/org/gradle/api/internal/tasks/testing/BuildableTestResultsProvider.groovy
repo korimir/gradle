@@ -70,12 +70,11 @@ class BuildableTestResultsProvider implements TestResultsProvider {
         testCase.outputEvents.each { BuildableOutputEvent event ->
             if ((destination == null || event.testOutputEvent.destination == destination) && (allClassOutput || testId == event.testId)) {
                 if (enricher != null) {
-                    enricher.enrichPre(event.testId, event.testOutputEvent.destination)
+                    if (!enricher.enrichPre(event.testId, event.testOutputEvent.destination)) {
+                        return
+                    }
                 }
                 writer.append(event.testOutputEvent.message)
-                if (enricher != null) {
-                    enricher.enrichPost(event.testId, event.testOutputEvent.destination)
-                }
             }
         }
         if (enricher != null) {

@@ -45,37 +45,54 @@ class ClassPageRenderer extends PageRenderer<ClassTestResults> {
         .endElement();
     }
 
-    private void renderTests(SimpleHtmlWriter htmlWriter) throws IOException {
+    private void renderTests(long classId, SimpleHtmlWriter htmlWriter) throws IOException {
+        // Write preClass logs
+        htmlWriter.startElement("span").attribute("class", "collapsibleOutput").attribute("id", "outputPre" + classId).characters("Class Output").endElement()
+        .startElement("span").attribute("class", "code").attribute("id", "coutputPre" + classId).attribute("style", "display:none").startElement("pre").characters("");
+            resultsProvider.writeAllOutput(classId, new ClassOutputFilter(htmlWriter, false), htmlWriter);
+        htmlWriter.endElement().endElement();
+        
+        htmlWriter.startElement("br").endElement();
+        
         htmlWriter.startElement("table")
             .startElement("thead")
                 .startElement("tr")
                     .startElement("th").characters("Test").endElement()
                     .startElement("th").characters("Duration").endElement()
                     .startElement("th").characters("Result").endElement()
+                    .startElement("th").characters("Output").endElement()
                 .endElement()
         .endElement();
 
+        final StdErrOutputEnricher enricher = new StdErrOutputEnricher(htmlWriter.getSubWriter(null));
         for (TestResult test : getResults().getTestResults()) {
             htmlWriter.startElement("tr")
                 .startElement("td").attribute("class", test.getStatusClass()).attribute("id", "r" + test.getId()).characters(test.getName()).endElement()
                 .startElement("td").characters(test.getFormattedDuration()).endElement()
                 .startElement("td").attribute("class", test.getStatusClass()).characters(test.getFormattedResultType()).endElement()
+                .startElement("td").startElement("span").attribute("class", "collapsibleOutput").
+                    attribute("id", "output" + classId + "_" + test.getId()).characters("Output").endElement()
+                .endElement()
+            .endElement();
+                    
+            htmlWriter.startElement("tr")
+                .startElement("td").attribute("colspan", "4")
+                    .startElement("span").attribute("class", "code").attribute("id", "coutput" + classId + "_" + test.getId())
+                        .attribute("style", "display:none").startElement("pre").characters("");
+                    resultsProvider.writeTestOutput(classId, test.getId(), enricher, htmlWriter);
+                    htmlWriter.endElement().endElement()
+                .endElement()
             .endElement();
         }
         htmlWriter.endElement();
-    }
-    
-    private void renderTestsOutput(long classId, SimpleHtmlWriter htmlWriter) throws IOException {
-        final StdErrOutputEnricher enricher = new StdErrOutputEnricher(htmlWriter.getSubWriter(null));
-        htmlWriter.startElement("span").attribute("class", "code");
-        for (TestResult test : getResults().getTestResults()) {
-            htmlWriter.startElement("br").endElement();
-            htmlWriter.startElement("h3").attribute("id", "h" + test.getId()).characters(test.getName()).endElement();
-            htmlWriter.startElement("pre").attribute("id", "p" + test.getId()).characters("");
-            resultsProvider.writeTestOutput(classId, test.getId(), enricher, htmlWriter);
-            htmlWriter.endElement();
-        }
-        htmlWriter.endElement();
+        
+        htmlWriter.startElement("br").endElement();
+        
+        // Write postClass logs
+        htmlWriter.startElement("span").attribute("class", "collapsibleOutput").attribute("id", "outputPost" + classId).characters("Class Output").endElement()
+        .startElement("span").attribute("class", "code").attribute("id", "coutputPost" + classId).attribute("style", "display:none").startElement("pre").characters("");
+            resultsProvider.writeAllOutput(classId, new ClassOutputFilter(htmlWriter, true), htmlWriter);
+        htmlWriter.endElement().endElement();
     }
 
     @Override
@@ -100,28 +117,12 @@ class ClassPageRenderer extends PageRenderer<ClassTestResults> {
     @Override
     protected void registerTabs() {
         addFailuresTab();
+        final long classId = getModel().getId();
         addTab("Tests", new ErroringAction<SimpleHtmlWriter>() {
             public void doExecute(SimpleHtmlWriter writer) throws IOException {
-                renderTests(writer);
+                renderTests(classId, writer);
             }
         });
-        final long classId = getModel().getId();
-        if (resultsProvider.hasOutput(classId)) {
-            addTab("Output", new ErroringAction<SimpleHtmlWriter>() {
-                @Override
-                protected void doExecute(SimpleHtmlWriter htmlWriter) throws IOException {
-                    renderTestsOutput(classId, htmlWriter);
-                }
-            });
-            addTab("Class Output", new ErroringAction<SimpleHtmlWriter>() {
-                @Override
-                protected void doExecute(SimpleHtmlWriter htmlWriter) throws IOException {
-                    htmlWriter.startElement("span").attribute("class", "code").startElement("pre").characters("");
-                    resultsProvider.writeNonTestOutput(classId, new StdErrOutputEnricher(htmlWriter.getSubWriter(null)), htmlWriter);
-                    htmlWriter.endElement().endElement();
-                }
-            });
-        }
     }
     
     
@@ -133,7 +134,7 @@ class ClassPageRenderer extends PageRenderer<ClassTestResults> {
             this.writer = writer;
         }
 
-        public void enrichPre(long testId, TestOutputEvent.Destination destination) throws IOException {
+        public boolean enrichPre(long testId, TestOutputEvent.Destination destination) throws IOException {
             if (prevDestination != destination) {
                 if (destination == Destination.StdErr) {
                     writer.startElement("span").attribute("class", "stderr").characters("");
@@ -142,10 +143,7 @@ class ClassPageRenderer extends PageRenderer<ClassTestResults> {
                 }
             }
             prevDestination = destination;
-        }
-
-        public void enrichPost(long testId, TestOutputEvent.Destination destination) throws IOException {
-            // do nothing
+            return true;
         }
         
         public void complete() throws IOException {
@@ -155,4 +153,36 @@ class ClassPageRenderer extends PageRenderer<ClassTestResults> {
             prevDestination = null;
         }
     }
+    
+    private static class ClassOutputFilter extends StdErrOutputEnricher {
+
+        private final boolean acceptOnlyAfter;
+        private boolean hasTestClasses;
+        
+        public ClassOutputFilter(SimpleHtmlWriter writer, boolean acceptOnlyAfter) {
+            super(writer);
+            this.acceptOnlyAfter = acceptOnlyAfter;
+        }
+        
+        @Override
+        public boolean enrichPre(long testId, Destination destination)
+                throws IOException {
+            if (testId == 0) {
+                if (hasTestClasses == acceptOnlyAfter) {
+                    return super.enrichPre(testId, destination);
+                }
+            } else {
+                hasTestClasses = true;
+            }
+            return false;
+        }
+        
+        @Override
+        public void complete() throws IOException {
+            hasTestClasses = false;
+            super.complete();
+        }
+        
+    }
 }
+

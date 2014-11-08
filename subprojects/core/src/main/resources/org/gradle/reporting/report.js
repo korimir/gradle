@@ -8,7 +8,18 @@ function initTabs() {
     tabs.select = select;
     tabs.deselectAll = deselectAll;
     tabs.select(0);
+    
+    initTestOutput();
     return true;
+}
+
+function initTestOutput() {
+  var elements = document.getElementsByClassName('collapsibleOutput')
+  for (var i = 0; i < elements.length; i++) {
+    if (applyToggleText(elements[i].id, true)) {
+      elements[i].onclick = toggleOutput;
+    }
+  }
 }
 
 window.onload = initTabs;
@@ -98,4 +109,30 @@ function findChildElements(container, name, targetClass) {
         }
     }
     return elements;
+}
+
+function toggleOutput() {
+    var toggleClickId = this.id;
+    var outputId = "c" + toggleClickId;
+    var text = this.innerHTML;
+    var outputElementStyle = document.getElementById(outputId).style;
+    outputElementStyle.display = outputElementStyle.display == "none" ? "block" : "none";
+    applyToggleText(toggleClickId, false);
+}
+
+function applyToggleText(toggleClickId, init) {
+    var toggleClickElement = document.getElementById(toggleClickId);
+    var output = document.getElementById("c" + toggleClickId);
+    var sign = output.style.display == "none" ? "+" : "-";
+    if (init) {
+        if (output.innerHTML.trim() == "<pre></pre>") {
+          toggleClickElement.style.display = "none";
+          return false;
+        }
+        toggleClickElement.innerHTML = "&nbsp;<strong>" + sign + "</strong> " + toggleClickElement.innerHTML + "&nbsp;";
+    } else {
+        var oldSign = sign == "+" ? "-" : "+";
+        toggleClickElement.innerHTML = toggleClickElement.innerHTML.replace(oldSign, sign);
+    }
+    return true;
 }

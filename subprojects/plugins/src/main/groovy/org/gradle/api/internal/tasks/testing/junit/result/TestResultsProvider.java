@@ -74,14 +74,9 @@ public interface TestResultsProvider extends Closeable {
         /**
          * testId > 0 means this is test
          * 
-         * @return true if message must be filtered (skipped)
+         * @return true if message accepted and should be passed into writer
          */
-        void enrichPre(long testId, TestOutputEvent.Destination destination) throws IOException;
-
-        /**
-         * see {@link #filterPre(long, org.gradle.api.tasks.testing.TestOutputEvent.Destination)}
-         */
-        void enrichPost(long testId, TestOutputEvent.Destination destination) throws IOException;
+        boolean enrichPre(long testId, TestOutputEvent.Destination destination) throws IOException;
         
         /**
          * Will be called after complete of writing data

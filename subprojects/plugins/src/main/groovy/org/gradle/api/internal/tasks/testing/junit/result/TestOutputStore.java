@@ -406,7 +406,10 @@ public class TestOutputStore {
 
                     if (testId == 0 || testId == readTestId) {
                         if (enricher != null) {
-                            enricher.enrichPre(readTestId, readDestination);
+                            if (!enricher.enrichPre(readTestId, readDestination)) {
+                                decoder.skipBytes(readLength);
+                                continue;
+                            }
                         }
 
                         byte[] stringBytes = new byte[readLength];
@@ -419,10 +422,6 @@ public class TestOutputStore {
                             throw UncheckedException.throwAsUncheckedException(e);
                         }
                         writer.write(message);
-                        
-                        if (enricher != null) {
-                            enricher.enrichPost(readTestId, destination);
-                        }
                     } else {
                         decoder.skipBytes(readLength);
                     }

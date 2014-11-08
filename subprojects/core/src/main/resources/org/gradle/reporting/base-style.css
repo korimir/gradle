@@ -163,3 +163,7 @@ span.code pre {
 span.code pre span.stderr {
   color: red;
 }
+
+span.collapsibleOutput {
+  cursor: pointer;
+}
