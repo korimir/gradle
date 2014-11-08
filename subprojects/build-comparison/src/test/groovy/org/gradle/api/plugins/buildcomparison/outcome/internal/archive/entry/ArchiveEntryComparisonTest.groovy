@@ -22,25 +22,23 @@ import spock.lang.Specification
 class ArchiveEntryComparisonTest extends Specification {
 
     ArchiveEntry entry(Map attrs) {
-        new ArchiveEntry(attrs)
+        ArchiveEntry.of(attrs)
     }
 
-    def sortPath
-    def path
+    String path = "path"
     def from = entry(path: path, size: 10)
     def to = entry(path: path, size: 10)
 
-    ArchiveEntryComparison comparison(String sortPath = sortPath, String path = path, ArchiveEntry from = from, ArchiveEntry to = to) {
-        new ArchiveEntryComparison(sortPath, path, from, to)
+    ArchiveEntryComparison comparison() {
+        new ArchiveEntryComparison(from, to)
     }
-
 
     def "comparisons"() {
         expect:
         comparison().comparisonResultType == ComparisonResultType.EQUAL
 
         when:
-        from.size += 1
+        from = entry(path: path, size: 11)
 
         then:
         comparison().comparisonResultType == ComparisonResultType.UNEQUAL
@@ -71,42 +69,4 @@ class ArchiveEntryComparisonTest extends Specification {
         thrown IllegalArgumentException
     }
 
-    def comparable() {
-        given:
-        sortPath = "a"
-        def a = comparison()
-        sortPath = "b"
-        def b = comparison()
-
-        expect:
-        a.compareTo(b) < 0
-        b.compareTo(a) > 0
-
-        when:
-        sortPath = null
-        path = "a"
-        b = comparison()
-
-        then:
-        a.compareTo(b) == 0
-        b.compareTo(a) == 0
-
-        when:
-        sortPath = "A"
-        path = null
-        b = comparison()
-
-        then:
-        a.compareTo(b) == 0
-        b.compareTo(a) == 0
-
-        when:
-        a = b
-        sortPath = "b"
-        b = comparison()
-
-        then:
-        a.compareTo(b) < 0
-        b.compareTo(a) > 0
-    }
 }

@@ -16,24 +16,23 @@
 
 package org.gradle.api.plugins.buildcomparison.outcome.internal.archive.entry
 
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableSet
 import spock.lang.Specification
 
 class ArchiveEntryTest extends Specification {
 
     def "equals and hash code"() {
         when:
-        def a1 = new ArchiveEntry(
-                path: "foo",
-                size: 10,
-                crc: 10,
-                directory: true
-        )
-        def a2 = new ArchiveEntry(
-                path: "foo",
-                size: 10,
-                crc: 10,
-                directory: true
-        )
+        def props = [
+                path     : "foo",
+                size     : 10,
+                crc      : 10,
+                directory: false
+        ]
+
+        def a1 = ArchiveEntry.of(props)
+        def a2 = ArchiveEntry.of(props)
 
         then:
         a1 == a2
@@ -41,7 +40,7 @@ class ArchiveEntryTest extends Specification {
         a1.hashCode() == a2.hashCode()
 
         when:
-        a2.size = 20
+        a2 = ArchiveEntry.of(props + [size: 20])
 
         then:
         a1 != a2
@@ -49,8 +48,16 @@ class ArchiveEntryTest extends Specification {
         a1.hashCode() != a2.hashCode()
 
         when:
-        a1.subEntries = []
-        a2.subEntries = []
+        def a3 = ArchiveEntry.of(props)
+        a1 = ArchiveEntry.of(props + [subEntries: ImmutableSet.of(a3)])
+
+        then:
+        a1 != a2
+        a2 != a1
+        a1.hashCode() != a2.hashCode()
+
+        when:
+        a2 = ArchiveEntry.of(props + [subEntries: ImmutableSet.of(a3)])
 
         then:
         a1 == a2
@@ -58,21 +65,8 @@ class ArchiveEntryTest extends Specification {
         a1.hashCode() == a2.hashCode()
 
         when:
-        a2.size = 10
-
-        then:
-        a1 == a2
-        a2 == a1
-        a1.hashCode() == a2.hashCode()
-
-        when:
-        def a3 = new ArchiveEntry(
-                path: "foo",
-                size: 10,
-                crc: 10,
-                directory: true
-        )
-        a1.subEntries = [a3]
+        def a4 = ArchiveEntry.of(props + [size: 20])
+        a1 = ArchiveEntry.of(props + [subEntries: ImmutableSet.of(a4)])
 
         then:
         a1 != a2
@@ -80,21 +74,7 @@ class ArchiveEntryTest extends Specification {
         a1.hashCode() != a2.hashCode()
 
         when:
-        a2.subEntries = [a3]
-
-        then:
-        a1 == a2
-        a2 == a1
-        a1.hashCode() == a2.hashCode()
-
-        when:
-        def a4 = new ArchiveEntry(
-                path: "foo",
-                size: 20,
-                crc: 10,
-                directory: true
-        )
-        a1.subEntries = [a4]
+        a1 = ArchiveEntry.of(props)
 
         then:
         a1 != a2
@@ -102,43 +82,23 @@ class ArchiveEntryTest extends Specification {
         a1.hashCode() != a2.hashCode()
 
         when:
-        a1.subEntries = null
+        a1 = ArchiveEntry.of(props + [crc: 20])
 
         then:
         a1 != a2
         a2 != a1
         a1.hashCode() != a2.hashCode()
+    }
 
-        when:
-        a2.subEntries = null
+    def "path ordering"() {
+        expect:
+        path("a") == path("a")
+        path("a") < path("a", "a")
+        path("z") > path("a", "a")
+        path("a", "a") < path("a", "b")
+    }
 
-        then:
-        a1 == a2
-        a2 == a1
-        a1.hashCode() == a2.hashCode()
-
-        when:
-        a1.crc = 20
-
-        then:
-        a1 != a2
-        a2 != a1
-        a1.hashCode() != a2.hashCode()
-
-        when:
-        a1.subEntries = []
-
-        then:
-        a1 != a2
-        a2 != a1
-        a1.hashCode() != a2.hashCode()
-
-        when:
-        a2.subEntries = []
-
-        then:
-        a1 == a2
-        a2 == a1
-        a1.hashCode() == a2.hashCode()
+    static ArchiveEntry.Path path(String... components) {
+        new ArchiveEntry.Path(ImmutableList.copyOf(components))
     }
 }

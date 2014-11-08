@@ -79,6 +79,10 @@ public abstract class ModelType<T> {
         }
     }
 
+    public static ModelType<Object> untyped() {
+        return UNTYPED;
+    }
+
     public static <T> ModelType<T> of(Class<T> clazz) {
         return new Simple<T>(TypeToken.of(clazz));
     }
@@ -276,7 +280,7 @@ public abstract class ModelType<T> {
             };
         }
 
-        public static Spec<ModelType<?>> isAssignableToAny(final Iterable<ModelType<?>> types) {
+        public static Spec<ModelType<?>> isAssignableToAny(final Iterable<? extends ModelType<?>> types) {
             return new Spec<ModelType<?>>() {
                 public boolean isSatisfiedBy(ModelType<?> element) {
                     return CollectionUtils.any(types, isAssignableFrom(element));

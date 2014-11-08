@@ -32,7 +32,7 @@ public class EnumStrategy implements ModelSchemaExtractionStrategy {
         }
     }
 
-    public Iterable<String> getSupportedTypes() {
+    public Iterable<String> getSupportedManagedTypes() {
         return Collections.singleton("enum types");
     }
 

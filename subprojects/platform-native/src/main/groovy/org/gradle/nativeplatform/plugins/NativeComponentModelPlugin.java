@@ -26,7 +26,6 @@ import org.gradle.internal.Actions;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.service.ServiceRegistry;
 import org.gradle.language.base.LanguageSourceSet;
-import org.gradle.language.base.ProjectSourceSet;
 import org.gradle.language.base.internal.LanguageRegistry;
 import org.gradle.language.base.internal.LanguageSourceSetInternal;
 import org.gradle.language.base.plugins.ComponentModelBasePlugin;
@@ -45,14 +44,10 @@ import org.gradle.nativeplatform.platform.internal.NativePlatforms;
 import org.gradle.nativeplatform.toolchain.internal.DefaultNativeToolChainRegistry;
 import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal;
 import org.gradle.nativeplatform.toolchain.internal.NativeToolChainRegistryInternal;
-import org.gradle.platform.base.BinaryContainer;
-import org.gradle.platform.base.ComponentSpec;
-import org.gradle.platform.base.ComponentSpecContainer;
-import org.gradle.platform.base.PlatformContainer;
+import org.gradle.platform.base.*;
 import org.gradle.platform.base.internal.BinaryNamingSchemeBuilder;
 import org.gradle.platform.base.internal.DefaultBinaryNamingSchemeBuilder;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.util.Collections;
 
@@ -62,30 +57,8 @@ import java.util.Collections;
 @Incubating
 public class NativeComponentModelPlugin implements Plugin<ProjectInternal> {
 
-    private final Instantiator instantiator;
-
-    @Inject
-    public NativeComponentModelPlugin(Instantiator instantiator) {
-        this.instantiator = instantiator;
-    }
-
     public void apply(final ProjectInternal project) {
         project.apply(Collections.singletonMap("plugin", ComponentModelBasePlugin.class));
-
-        ProjectSourceSet sources = project.getExtensions().getByType(ProjectSourceSet.class);
-        ComponentSpecContainer components = project.getExtensions().getByType(ComponentSpecContainer.class);
-        components.registerFactory(NativeExecutableSpec.class, new NativeExecutableSpecFactory(instantiator, sources, project));
-        NamedDomainObjectContainer<NativeExecutableSpec> nativeExecutables = components.containerWithType(NativeExecutableSpec.class);
-
-        components.registerFactory(NativeLibrarySpec.class, new NativeLibrarySpecFactory(instantiator, sources, project));
-        NamedDomainObjectContainer<NativeLibrarySpec> nativeLibraries = components.containerWithType(NativeLibrarySpec.class);
-
-        project.getExtensions().create("nativeRuntime", DefaultNativeComponentExtension.class, nativeExecutables, nativeLibraries);
-
-        // TODO:DAZ Remove these: should not pollute the global namespace
-        project.getExtensions().add("nativeComponents", components.withType(NativeComponentSpec.class));
-        project.getExtensions().add("executables", nativeExecutables);
-        project.getExtensions().add("libraries", nativeLibraries);
     }
 
     /**
@@ -94,6 +67,16 @@ public class NativeComponentModelPlugin implements Plugin<ProjectInternal> {
     @SuppressWarnings("UnusedDeclaration")
     @RuleSource
     public static class Rules {
+
+        @ComponentType
+        void nativeExecutable(ComponentTypeBuilder<NativeExecutableSpec> builder) {
+            builder.defaultImplementation(DefaultNativeExecutableSpec.class);
+        }
+
+        @ComponentType
+        void nativeLibrary(ComponentTypeBuilder<NativeLibrarySpec> builder) {
+            builder.defaultImplementation(DefaultNativeLibrarySpec.class);
+        }
 
         @Model
         Repositories repositories(ServiceRegistry serviceRegistry, FlavorContainer flavors, PlatformContainer platforms, BuildTypeContainer buildTypes) {
@@ -145,6 +128,7 @@ public class NativeComponentModelPlugin implements Plugin<ProjectInternal> {
             platforms.registerFactory(NativePlatform.class, nativePlatformFactory);
         }
 
+        // TODO:DAZ Migrate to @BinaryType and @ComponentBinaries
         @Mutate
         public void createNativeBinaries(BinaryContainer binaries, NamedDomainObjectSet<NativeComponentSpec> nativeComponents,
                                          LanguageRegistry languages, NativeToolChainRegistryInternal toolChains,
@@ -194,7 +178,7 @@ public class NativeComponentModelPlugin implements Plugin<ProjectInternal> {
             }
         }
 
-        @Mutate
+        @Finalize // This should be @Mutate for each component in a container, rather than finalizing the container itself
         void configureGeneratedSourceSets(ComponentSpecContainer componentSpecs) {
             for (ComponentSpec componentSpec : componentSpecs) {
                 for (LanguageSourceSetInternal languageSourceSet : componentSpec.getSource().withType(LanguageSourceSetInternal.class)) {
@@ -210,7 +194,7 @@ public class NativeComponentModelPlugin implements Plugin<ProjectInternal> {
             }
         }
 
-        @Finalize
+        @Finalize // This is providing defaults for each component in the container, but the only mechanism for now is to finalize the collection
         public void applyHeaderSourceSetConventions(ComponentSpecContainer componentSpecs) {
             for (ComponentSpec componentSpec : componentSpecs) {
                 DomainObjectSet<LanguageSourceSet> functionalSourceSet = componentSpec.getSource();

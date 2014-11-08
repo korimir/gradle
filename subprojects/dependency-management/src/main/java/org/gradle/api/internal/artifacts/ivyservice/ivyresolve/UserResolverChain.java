@@ -31,9 +31,11 @@ public class UserResolverChain implements RepositoryChain {
     private final RepositoryChainArtifactResolver artifactResolver = new RepositoryChainArtifactResolver();
     private final RepositoryChainAdapter adapter;
     private final DynamicVersionResolver dynamicVersionResolver;
+    private final ComponentSelectionRulesInternal componentSelectionRules;
 
-    public UserResolverChain(VersionSelectorScheme versionSelectorScheme, VersionComparator versionComparator, ComponentSelectionRulesInternal versionSelectionRules) {
-        NewestVersionComponentChooser componentChooser = new NewestVersionComponentChooser(versionComparator, versionSelectorScheme, versionSelectionRules);
+    public UserResolverChain(VersionSelectorScheme versionSelectorScheme, VersionComparator versionComparator, ComponentSelectionRulesInternal componentSelectionRules) {
+        this.componentSelectionRules = componentSelectionRules;
+        NewestVersionComponentChooser componentChooser = new NewestVersionComponentChooser(versionComparator, versionSelectorScheme, componentSelectionRules);
         ModuleTransformer metaDataFactory = new ModuleTransformer();
         dependencyResolver = new RepositoryChainDependencyResolver(componentChooser, metaDataFactory);
         dynamicVersionResolver = new DynamicVersionResolver(componentChooser, metaDataFactory);
@@ -54,6 +56,10 @@ public class UserResolverChain implements RepositoryChain {
 
     public ArtifactResolver getArtifactResolver() {
         return artifactResolver;
+    }
+
+    public ComponentSelectionRulesInternal getComponentSelectionRules() {
+        return componentSelectionRules;
     }
 
     public void add(ModuleComponentRepository repository) {

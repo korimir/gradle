@@ -22,10 +22,8 @@ import org.gradle.test.fixtures.archive.JarTestFixture
 import org.gradle.util.AvailablePortFinder
 import org.gradle.util.TextUtil
 import org.junit.Rule
-import spock.lang.Ignore
 import spock.lang.Timeout
 
-@Ignore("Test is causing OOM exceptions on CI")
 class PlayApplicationPluginIntegrationTest extends AbstractIntegrationSpec {
 
     @Rule
@@ -48,6 +46,12 @@ class PlayApplicationPluginIntegrationTest extends AbstractIntegrationSpec {
             scalaCompileOptions.useAnt = false
             scalaCompileOptions.forkOptions.memoryMaximumSize = '1g'
             scalaCompileOptions.forkOptions.jvmArgs = ['-XX:MaxPermSize=512m']
+        }
+
+        tasks.withType(TwirlCompile){
+            fork = true
+            forkOptions.memoryInitialSize =  "256m"
+            forkOptions.memoryMaximumSize =  "512m"
         }
 """
     }
@@ -75,12 +79,8 @@ Binaries
         when:
         succeeds("assemble")
         then:
-        output.contains(TextUtil.toPlatformLineSeparators(""":routesCompileMyAppBinary UP-TO-DATE
-:twirlCompileMyAppBinary UP-TO-DATE
-:scalaCompileMyAppBinary UP-TO-DATE
-:createMyAppBinaryJar
-:myAppBinary
-:assemble"""));
+        executed(":createMyAppBinaryJar", ":myAppBinary", ":assemble")
+        skipped(":routesCompileMyAppBinary" , ":twirlCompileMyAppBinary", ":scalaCompileMyAppBinary")
         and:
         file("build/jars/myApp/myAppBinary.jar").exists()
     }

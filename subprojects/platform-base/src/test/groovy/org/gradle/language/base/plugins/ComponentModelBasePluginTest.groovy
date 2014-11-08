@@ -33,6 +33,7 @@ import org.gradle.platform.base.TransformationFileType
 import org.gradle.platform.base.internal.ComponentSpecInternal
 import org.gradle.platform.base.component.BaseComponentSpec
 import org.gradle.util.TestUtil
+import org.gradle.util.WrapUtil
 import spock.lang.Specification
 
 class ComponentModelBasePluginTest extends Specification {
@@ -54,8 +55,6 @@ class ComponentModelBasePluginTest extends Specification {
 
     def "registers language sourceset factory and created default source set for component"() {
         setup:
-        project.apply(plugin: ComponentModelBasePlugin)
-        project.languages.add(new TestLanguageRegistration())
 
         def componentSpecInternal = Mock(ComponentSpecInternal)
         _ * componentSpecInternal.name >> "testComponent"
@@ -64,9 +63,17 @@ class ComponentModelBasePluginTest extends Specification {
         def componentFunctionalSourceSet = Mock(FunctionalSourceSet)
         _ * componentFunctionalSourceSet.name >> "testComponentSources"
         _ * componentSpecInternal.sources >> componentFunctionalSourceSet
+        _ * componentSpecInternal.source >> WrapUtil.toDomainObjectSet(LanguageSourceSet)
 
         when:
+        project.apply(plugin: ComponentModelBasePlugin)
+        project.model {
+            languages {
+                add(new TestLanguageRegistration())
+            }
+        }
         project.componentSpecs.add(componentSpecInternal)
+        project.evaluate()
 
         then:
         1 * componentFunctionalSourceSet.registerFactory(TestSourceSet, _ as NamedDomainObjectFactory)
