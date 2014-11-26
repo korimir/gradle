@@ -164,6 +164,5 @@ span.code pre span.stderr {
   color: red;
 }
 
-span.collapsibleOutput {
-  cursor: pointer;
-}
+table.autoWidth th:last-child, table.autoWidth td:last-child {width: 100%; }
+

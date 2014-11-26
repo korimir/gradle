@@ -123,15 +123,21 @@ function toggleOutput() {
 function applyToggleText(toggleClickId, init) {
     var toggleClickElement = document.getElementById(toggleClickId);
     var output = document.getElementById("c" + toggleClickId);
-    var sign = output.style.display == "none" ? "+" : "-";
     if (init) {
-        if (output.innerHTML.trim() == "<pre></pre>") {
+        output.style.display = "none";
+        var innerHTML = output.innerHTML.trim();
+        if (innerHTML.replace(/(\r\n|\n|\r)/gm,"") == "<pre>...</pre>") {
           toggleClickElement.style.display = "none";
           return false;
+        } else if (innerHTML == "<pre></pre>") {
+          return false;
         }
-        toggleClickElement.innerHTML = "&nbsp;<strong>" + sign + "</strong> " + toggleClickElement.innerHTML + "&nbsp;";
+        toggleClickElement.style.cursor = 'pointer';
+        toggleClickElement.innerHTML = toggleClickElement.innerHTML + "&nbsp;<strong>+</strong>";
     } else {
-        var oldSign = sign == "+" ? "-" : "+";
+        var sign = output.style.display == "none" ? "+" : "-";
+        var oldSign = "<strong>" + (sign == "+" ? "-" : "+") + "</strong>";
+        sign = "<strong>" + sign + "</strong>";
         toggleClickElement.innerHTML = toggleClickElement.innerHTML.replace(oldSign, sign);
     }
     return true;
